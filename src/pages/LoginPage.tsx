@@ -1,13 +1,9 @@
 import { FormEvent, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AxiosError } from 'axios';
+import { ArrowRight, KeyRound, Mail, ShieldCheck, Workflow } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 
-/**
- * Shape of the API envelope returned by the Laravel login endpoint when a
- * request fails. We only consume `message` and `errors` here — `success`
- * and `data` are present on every envelope but unused on the error path.
- */
 interface ApiErrorEnvelope {
     success?: boolean;
     data?: unknown;
@@ -15,18 +11,6 @@ interface ApiErrorEnvelope {
     errors?: Record<string, string[]> | null;
 }
 
-/**
- * Login page.
- *
- * Posts `{ email, password }` to `POST /api/login` via `AuthContext.login()`,
- * which stores the bearer token and hydrates `currentUser` from `/api/me`.
- * On success we navigate to whatever route the user originally tried to
- * reach (passed through `<RequireAuth>` via `location.state.from`), or to
- * `/projects` as the default landing page (Requirement 10.2).
- *
- * On failure we render the envelope's `message` and any field-level
- * `errors` from the 422 response (Requirement 10.1, 9.5).
- */
 export function LoginPage(): JSX.Element {
     const { login } = useAuth();
     const navigate = useNavigate();
@@ -50,10 +34,6 @@ export function LoginPage(): JSX.Element {
             await login(email, password);
             navigate(fallback, { replace: true });
         } catch (err) {
-            // The login call rejects with either an AxiosError carrying the
-            // envelope, or a plain Error if the envelope was malformed. We
-            // surface whichever message we can find and any field-level
-            // validation errors the server returned.
             const ax = err as AxiosError<ApiErrorEnvelope>;
             const env = ax.response?.data;
             const message =
@@ -68,67 +48,106 @@ export function LoginPage(): JSX.Element {
     }
 
     return (
-        <div
-            style={{
-                maxWidth: 360,
-                margin: '4rem auto',
-                fontFamily: 'system-ui, sans-serif',
-            }}
-        >
-            <h1>Sign in</h1>
-            <form onSubmit={handleSubmit} noValidate>
-                <div style={{ marginBottom: '0.75rem' }}>
-                    <label style={{ display: 'block' }}>
-                        Email
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            autoComplete="username"
-                            disabled={submitting}
-                            style={{ display: 'block', width: '100%' }}
-                        />
-                    </label>
-                    {fieldErrors.email?.map((m) => (
-                        <div key={m} role="alert" style={{ color: 'crimson' }}>
-                            {m}
-                        </div>
-                    ))}
+        <main className="auth-page">
+            <section className="auth-rail" aria-label="Application overview">
+                <div className="brand-mark">
+                    <Workflow size={28} aria-hidden="true" />
                 </div>
-                <div style={{ marginBottom: '0.75rem' }}>
-                    <label style={{ display: 'block' }}>
-                        Password
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            autoComplete="current-password"
-                            disabled={submitting}
-                            style={{ display: 'block', width: '100%' }}
-                        />
-                    </label>
-                    {fieldErrors.password?.map((m) => (
-                        <div key={m} role="alert" style={{ color: 'crimson' }}>
-                            {m}
-                        </div>
-                    ))}
+                <div>
+                    <p className="eyebrow">Task Management</p>
+                    <h1>Projects, tasks, and overdue reviews in one workspace.</h1>
+                    <p className="auth-copy">
+                        Track assignment progress, keep due dates visible, and manage the
+                        overdue workflow from the admin project view.
+                    </p>
                 </div>
-                {error && (
-                    <div role="alert" style={{ color: 'crimson', marginTop: '0.5rem' }}>
-                        {error}
+                <div className="auth-stat-grid" aria-label="Assignment coverage">
+                    <div>
+                        <strong>Admin</strong>
+                        <span>Projects and task controls</span>
                     </div>
-                )}
-                <button
-                    type="submit"
-                    disabled={submitting}
-                    style={{ marginTop: '1rem' }}
-                >
-                    {submitting ? 'Signing in…' : 'Sign in'}
-                </button>
-            </form>
-        </div>
+                    <div>
+                        <strong>User</strong>
+                        <span>Assigned task updates</span>
+                    </div>
+                    <div>
+                        <strong>Django</strong>
+                        <span>Overdue rule handling</span>
+                    </div>
+                </div>
+            </section>
+
+            <section className="auth-card" aria-labelledby="login-heading">
+                <div className="auth-card-header">
+                    <div className="icon-chip">
+                        <ShieldCheck size={20} aria-hidden="true" />
+                    </div>
+                    <div>
+                        <p className="eyebrow">Secure access</p>
+                        <h2 id="login-heading">Sign in</h2>
+                    </div>
+                </div>
+
+                <form className="form-stack" onSubmit={handleSubmit} noValidate>
+                    <div className="field">
+                        <label className="field-label" htmlFor="email">
+                            Email
+                        </label>
+                        <div className="input-wrap">
+                            <Mail size={18} aria-hidden="true" />
+                            <input
+                                id="email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                                autoComplete="username"
+                                disabled={submitting}
+                            />
+                        </div>
+                        {fieldErrors.email?.map((m) => (
+                            <div className="field-error" key={m} role="alert">
+                                {m}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="field">
+                        <label className="field-label" htmlFor="password">
+                            Password
+                        </label>
+                        <div className="input-wrap">
+                            <KeyRound size={18} aria-hidden="true" />
+                            <input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                autoComplete="current-password"
+                                disabled={submitting}
+                            />
+                        </div>
+                        {fieldErrors.password?.map((m) => (
+                            <div className="field-error" key={m} role="alert">
+                                {m}
+                            </div>
+                        ))}
+                    </div>
+
+                    {error && (
+                        <div className="alert alert-danger" role="alert">
+                            {error}
+                        </div>
+                    )}
+
+                    <button className="btn btn-primary btn-full" type="submit" disabled={submitting}>
+                        <span>{submitting ? 'Signing in...' : 'Sign in'}</span>
+                        <ArrowRight size={18} aria-hidden="true" />
+                    </button>
+                </form>
+            </section>
+        </main>
     );
 }
 

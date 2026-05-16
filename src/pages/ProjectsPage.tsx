@@ -1,13 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { FolderKanban, LogOut, SearchX, UserCircle } from 'lucide-react';
 import { laravelClient } from '../api/axiosClient';
 import { useAuth } from '../auth/AuthContext';
 
-/**
- * Project list row as returned by `GET /api/projects`. The `tasks_count`
- * field is computed server-side via `withCount('tasks')` (see
- * `ProjectController@index`).
- */
 interface Project {
     id: number;
     title: string;
@@ -15,11 +11,6 @@ interface Project {
     tasks_count: number;
 }
 
-/**
- * Common envelope shape returned by both backends. Duplicated locally
- * rather than imported so this page does not couple to other modules'
- * typings.
- */
 interface Envelope<T> {
     success: boolean;
     data: T | null;
@@ -27,14 +18,6 @@ interface Envelope<T> {
     errors: Record<string, string[]> | null;
 }
 
-/**
- * `/projects` route — lists every project visible to the current user.
- * Admins see all projects; members see only projects that contain a task
- * assigned to them (the filtering happens server-side per Requirement 2.6).
- *
- * Each row links to `/projects/:id`. The `tasks_count` is rendered next to
- * the title so users can see project size without drilling in.
- */
 export function ProjectsPage(): JSX.Element {
     const { logout, currentUser } = useAuth();
     const [projects, setProjects] = useState<Project[] | null>(null);
@@ -50,9 +33,6 @@ export function ProjectsPage(): JSX.Element {
             })
             .catch((e) => {
                 if (cancelled) return;
-                // 401 is handled centrally by axiosClient (clears token,
-                // redirects). Any other error surfaces here so the user
-                // gets feedback instead of an empty screen.
                 setError(e?.response?.data?.message ?? 'Failed to load projects.');
             });
         return () => {
@@ -60,48 +40,94 @@ export function ProjectsPage(): JSX.Element {
         };
     }, []);
 
-    if (error) return <div role="alert">{error}</div>;
-    if (projects === null) return <div>Loading projects…</div>;
+    const taskTotal = useMemo(
+        () => projects?.reduce((sum, project) => sum + project.tasks_count, 0) ?? 0,
+        [projects],
+    );
+
+    if (error) {
+        return (
+            <main className="app-shell">
+                <div className="alert alert-danger app-alert" role="alert">
+                    {error}
+                </div>
+            </main>
+        );
+    }
+
+    if (projects === null) {
+        return (
+            <main className="app-shell">
+                <div className="loading-panel">Loading projects...</div>
+            </main>
+        );
+    }
 
     return (
-        <div style={{ maxWidth: 720, margin: '2rem auto', fontFamily: 'system-ui, sans-serif' }}>
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h1>Projects</h1>
-                <div>
-                    {currentUser && (
-                        <span style={{ marginRight: '0.5rem' }}>
-                            Signed in as {currentUser.name} ({currentUser.role}){' '}
-                        </span>
-                    )}
-                    <button onClick={() => logout()}>Sign out</button>
+        <main className="app-shell">
+            <header className="topbar">
+                <div className="topbar-title">
+                    <div className="brand-mark brand-mark-small">
+                        <FolderKanban size={22} aria-hidden="true" />
+                    </div>
+                    <div>
+                        <p className="eyebrow">Workspace</p>
+                        <h1>Projects</h1>
+                    </div>
+                </div>
+                <div className="session-card">
+                    <UserCircle size={22} aria-hidden="true" />
+                    <div>
+                        <span>{currentUser?.name ?? 'Signed in'}</span>
+                        <strong>{currentUser?.role ?? 'user'}</strong>
+                    </div>
+                    <button className="btn btn-ghost" type="button" onClick={() => logout()}>
+                        <LogOut size={17} aria-hidden="true" />
+                        <span>Sign out</span>
+                    </button>
                 </div>
             </header>
+
+            <section className="metric-grid" aria-label="Project summary">
+                <div className="metric-card">
+                    <span>Total projects</span>
+                    <strong>{projects.length}</strong>
+                </div>
+                <div className="metric-card metric-card-accent">
+                    <span>Visible tasks</span>
+                    <strong>{taskTotal}</strong>
+                </div>
+                <div className="metric-card">
+                    <span>Access level</span>
+                    <strong>{currentUser?.role === 'admin' ? 'Admin' : 'Member'}</strong>
+                </div>
+            </section>
+
             {projects.length === 0 ? (
-                <p>No projects yet.</p>
+                <section className="empty-state">
+                    <SearchX size={32} aria-hidden="true" />
+                    <h2>No projects yet</h2>
+                    <p>Projects will appear here after an admin creates them.</p>
+                </section>
             ) : (
-                <ul style={{ listStyle: 'none', padding: 0 }}>
-                    {projects.map((p) => (
-                        <li
-                            key={p.id}
-                            style={{ borderBottom: '1px solid #eee', padding: '0.5rem 0' }}
-                        >
-                            <Link to={`/projects/${p.id}`}>
-                                <strong>{p.title}</strong>
-                            </Link>
-                            {' — '}
-                            <span>
-                                {p.tasks_count} task{p.tasks_count === 1 ? '' : 's'}
+                <section className="project-grid" aria-label="Project list">
+                    {projects.map((project) => (
+                        <Link className="project-card" key={project.id} to={`/projects/${project.id}`}>
+                            <div className="project-card-icon">
+                                <FolderKanban size={22} aria-hidden="true" />
+                            </div>
+                            <div className="project-card-content">
+                                <h2>{project.title}</h2>
+                                {project.description && <p>{project.description}</p>}
+                            </div>
+                            <span className="pill pill-neutral">
+                                {project.tasks_count} task{project.tasks_count === 1 ? '' : 's'}
                             </span>
-                            {p.description && (
-                                <p style={{ color: '#666', margin: '0.25rem 0 0' }}>
-                                    {p.description}
-                                </p>
-                            )}
-                        </li>
+                        </Link>
                     ))}
-                </ul>
+                </section>
             )}
-        </div>
+        </main>
     );
 }
 

@@ -1,22 +1,14 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { AxiosError } from 'axios';
+import { CalendarDays, FileText, Loader2, Plus, UserRound } from 'lucide-react';
 import { laravelClient } from '../api/axiosClient';
 
-/**
- * Member dropdown row. The `/api/users` endpoint already filters to users
- * with `role='user'` (admins are not assignable), so we only need the
- * fields the dropdown actually displays.
- */
 interface Member {
     id: number;
     name: string;
     email: string;
 }
 
-/**
- * Standard envelope returned by both backends. Duplicated locally to keep
- * this component decoupled from any per-endpoint typings.
- */
 interface Envelope<T> {
     success: boolean;
     data: T | null;
@@ -25,21 +17,13 @@ interface Envelope<T> {
 }
 
 interface Props {
-    /** Project the new task will be created against. Comes from the route param. */
     projectId: number;
-    /** Called after a successful create so the parent can re-fetch the project. */
     onCreated: () => void;
 }
 
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'] as const;
 type Priority = typeof PRIORITIES[number];
 
-/**
- * Admin-only form for creating a task on a given project. Renders the
- * member list as the assignee dropdown and posts to `POST /api/tasks` with
- * the project id from the route param. On success the form is cleared and
- * the parent is notified so it can re-fetch the project (Requirement 10.5).
- */
 export function TaskCreationForm({ projectId, onCreated }: Props): JSX.Element {
     const [members, setMembers] = useState<Member[]>([]);
     const [loadingMembers, setLoadingMembers] = useState<boolean>(true);
@@ -48,17 +32,12 @@ export function TaskCreationForm({ projectId, onCreated }: Props): JSX.Element {
     const [description, setDescription] = useState<string>('');
     const [priority, setPriority] = useState<Priority>('MEDIUM');
     const [dueDate, setDueDate] = useState<string>('');
-    // Empty string represents "unassigned" — kept as string so the <select>
-    // value binds cleanly; converted to a number when posting.
     const [assigneeId, setAssigneeId] = useState<string>('');
 
     const [submitting, setSubmitting] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
-    // Load members for the assignee dropdown on mount. The 401 path is
-    // handled centrally by axiosClient, so a thrown error here just means
-    // the dropdown stays empty (with `— Unassigned —` still selectable).
     useEffect(() => {
         let cancelled = false;
         laravelClient
@@ -83,9 +62,6 @@ export function TaskCreationForm({ projectId, onCreated }: Props): JSX.Element {
         setFieldErrors({});
         setSubmitting(true);
 
-        // Build the request body. Optional fields are only included when
-        // they have a value so the API never receives `description: ""` or
-        // `assignee_id: null` when the user simply left them blank.
         const body: Record<string, unknown> = {
             project_id: projectId,
             title: title.trim(),
@@ -97,7 +73,6 @@ export function TaskCreationForm({ projectId, onCreated }: Props): JSX.Element {
 
         try {
             await laravelClient.post('/api/tasks', body);
-            // Reset form and notify parent so it re-fetches the project.
             setTitle('');
             setDescription('');
             setPriority('MEDIUM');
@@ -107,8 +82,6 @@ export function TaskCreationForm({ projectId, onCreated }: Props): JSX.Element {
         } catch (err) {
             const ax = err as AxiosError<Envelope<unknown>>;
             const env = ax.response?.data;
-            // 422 carries field-level errors; other failures fall back to
-            // the envelope's top-level message.
             setError(env?.message ?? 'Failed to create task.');
             setFieldErrors(env?.errors ?? {});
         } finally {
@@ -117,96 +90,123 @@ export function TaskCreationForm({ projectId, onCreated }: Props): JSX.Element {
     }
 
     return (
-        <form onSubmit={handleSubmit} noValidate>
-            <div>
-                <label>
+        <form className="task-form" onSubmit={handleSubmit} noValidate>
+            <div className="field field-wide">
+                <label className="field-label" htmlFor="task-title">
                     Title
+                </label>
+                <div className="input-wrap">
+                    <FileText size={18} aria-hidden="true" />
                     <input
+                        id="task-title"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         required
                         disabled={submitting}
                     />
-                </label>
-                {fieldErrors.title?.map((m) => (
-                    <div key={m} role="alert">
-                        {m}
+                </div>
+                {fieldErrors.title?.map((message) => (
+                    <div className="field-error" key={message} role="alert">
+                        {message}
                     </div>
                 ))}
             </div>
-            <div>
-                <label>
+
+            <div className="field field-wide">
+                <label className="field-label" htmlFor="task-description">
                     Description
-                    <textarea
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        disabled={submitting}
-                    />
                 </label>
+                <textarea
+                    id="task-description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    disabled={submitting}
+                />
             </div>
-            <div>
-                <label>
+
+            <div className="field">
+                <label className="field-label" htmlFor="task-priority">
                     Priority
-                    <select
-                        value={priority}
-                        onChange={(e) => setPriority(e.target.value as Priority)}
-                        disabled={submitting}
-                    >
-                        {PRIORITIES.map((p) => (
-                            <option key={p} value={p}>
-                                {p}
-                            </option>
-                        ))}
-                    </select>
                 </label>
+                <select
+                    id="task-priority"
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value as Priority)}
+                    disabled={submitting}
+                >
+                    {PRIORITIES.map((p) => (
+                        <option key={p} value={p}>
+                            {p}
+                        </option>
+                    ))}
+                </select>
             </div>
-            <div>
-                <label>
+
+            <div className="field">
+                <label className="field-label" htmlFor="task-due-date">
                     Due date
+                </label>
+                <div className="input-wrap">
+                    <CalendarDays size={18} aria-hidden="true" />
                     <input
+                        id="task-due-date"
                         type="date"
                         value={dueDate}
                         onChange={(e) => setDueDate(e.target.value)}
                         required
                         disabled={submitting}
                     />
-                </label>
-                {fieldErrors.due_date?.map((m) => (
-                    <div key={m} role="alert">
-                        {m}
+                </div>
+                {fieldErrors.due_date?.map((message) => (
+                    <div className="field-error" key={message} role="alert">
+                        {message}
                     </div>
                 ))}
             </div>
-            <div>
-                <label>
+
+            <div className="field field-wide">
+                <label className="field-label" htmlFor="task-assignee">
                     Assignee
+                </label>
+                <div className="input-wrap">
+                    <UserRound size={18} aria-hidden="true" />
                     <select
+                        id="task-assignee"
                         value={assigneeId}
                         onChange={(e) => setAssigneeId(e.target.value)}
                         disabled={submitting || loadingMembers}
                     >
-                        <option value="">— Unassigned —</option>
-                        {members.map((m) => (
-                            <option key={m.id} value={m.id}>
-                                {m.name} ({m.email})
+                        <option value="">Unassigned</option>
+                        {members.map((member) => (
+                            <option key={member.id} value={member.id}>
+                                {member.name} ({member.email})
                             </option>
                         ))}
                     </select>
-                </label>
-                {fieldErrors.assignee_id?.map((m) => (
-                    <div key={m} role="alert">
-                        {m}
+                </div>
+                {fieldErrors.assignee_id?.map((message) => (
+                    <div className="field-error" key={message} role="alert">
+                        {message}
                     </div>
                 ))}
             </div>
+
             {error && (
-                <div role="alert" style={{ color: 'crimson' }}>
+                <div className="alert alert-danger field-wide" role="alert">
                     {error}
                 </div>
             )}
-            <button type="submit" disabled={submitting}>
-                {submitting ? 'Creating…' : 'Create task'}
-            </button>
+
+            <div className="form-actions field-wide">
+                <button className="btn btn-primary" type="submit" disabled={submitting}>
+                    {submitting ? (
+                        <Loader2 className="icon-spin" size={17} aria-hidden="true" />
+                    ) : (
+                        <Plus size={17} aria-hidden="true" />
+                    )}
+                    <span>{submitting ? 'Creating...' : 'Create task'}</span>
+                </button>
+            </div>
         </form>
     );
 }
