@@ -230,119 +230,121 @@ export function ProjectDetailsPage(): JSX.Element {
                 </div>
             )}
 
-            <section className="panel">
-                <div className="panel-header">
-                    <div>
-                        <p className="eyebrow">Task board</p>
-                        <h2>Tasks</h2>
-                    </div>
-                </div>
-
-                {project.tasks.length === 0 ? (
-                    <div className="empty-state compact-empty">
-                        <ClipboardList size={30} aria-hidden="true" />
-                        <h3>No tasks for this project</h3>
-                    </div>
-                ) : (
-                    <div className="table-wrap">
-                        <table className="task-table">
-                            <thead>
-                                <tr>
-                                    <th>Task</th>
-                                    <th>Status</th>
-                                    <th>Priority</th>
-                                    <th>Due date</th>
-                                    <th>Assignee</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {project.tasks.map((task) => (
-                                    <tr key={task.id}>
-                                        <td>
-                                            <div className="task-title-cell">
-                                                <strong>{task.title}</strong>
-                                                {task.description && <span>{task.description}</span>}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            {task.status === 'OVERDUE' ? (
-                                                <span className={statusBadgeClass(task.status)}>
-                                                    <AlertTriangle size={14} aria-hidden="true" />
-                                                    {task.status}
-                                                </span>
-                                            ) : (
-                                                <select
-                                                    className="status-select"
-                                                    aria-label={`Status for ${task.title}`}
-                                                    value={task.status}
-                                                    disabled={task.status === 'DONE' || busyTaskId === task.id}
-                                                    onChange={(e) =>
-                                                        updateTaskStatus(
-                                                            task,
-                                                            e.target.value as Exclude<TaskStatus, 'OVERDUE'>,
-                                                        )
-                                                    }
-                                                >
-                                                    {EDITABLE_STATUSES.map((status) => (
-                                                        <option key={status} value={status}>
-                                                            {status}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <span className={priorityBadgeClass(task.priority)}>{task.priority}</span>
-                                        </td>
-                                        <td>
-                                            <span className="icon-text">
-                                                <CalendarClock size={15} aria-hidden="true" />
-                                                {formatDate(task.due_date)}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span className="icon-text">
-                                                <UserRound size={15} aria-hidden="true" />
-                                                {task.assignee ? task.assignee.name : 'Unassigned'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            {task.status === 'OVERDUE' && isAdmin ? (
-                                                <button
-                                                    className="btn btn-danger btn-small"
-                                                    type="button"
-                                                    onClick={() => closeOverdueTask(task)}
-                                                    disabled={busyTaskId === task.id}
-                                                >
-                                                    <CheckCircle2 size={15} aria-hidden="true" />
-                                                    <span>{busyTaskId === task.id ? 'Closing...' : 'Close'}</span>
-                                                </button>
-                                            ) : task.status === 'OVERDUE' ? (
-                                                <span className="muted">Admin only</span>
-                                            ) : (
-                                                <span className="muted">No action</span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </section>
-
-            {isAdmin && (
-                <section className="panel">
+            <div className={isAdmin ? 'detail-content detail-content-with-form' : 'detail-content'}>
+                <section className="panel task-board-panel">
                     <div className="panel-header">
                         <div>
-                            <p className="eyebrow">Admin action</p>
-                            <h2>Create task</h2>
+                            <p className="eyebrow">Task board</p>
+                            <h2>Tasks</h2>
                         </div>
                     </div>
-                    <TaskCreationForm projectId={project.id} onCreated={fetchProject} />
+
+                    {project.tasks.length === 0 ? (
+                        <div className="empty-state compact-empty">
+                            <ClipboardList size={30} aria-hidden="true" />
+                            <h3>No tasks for this project</h3>
+                        </div>
+                    ) : (
+                        <div className="table-wrap">
+                            <table className="task-table">
+                                <thead>
+                                    <tr>
+                                        <th>Task</th>
+                                        <th>Status</th>
+                                        <th>Priority</th>
+                                        <th>Due date</th>
+                                        <th>Assignee</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {project.tasks.map((task) => (
+                                        <tr key={task.id}>
+                                            <td>
+                                                <div className="task-title-cell">
+                                                    <strong>{task.title}</strong>
+                                                    {task.description && <span>{task.description}</span>}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {task.status === 'OVERDUE' ? (
+                                                    <span className={statusBadgeClass(task.status)}>
+                                                        <AlertTriangle size={14} aria-hidden="true" />
+                                                        {task.status}
+                                                    </span>
+                                                ) : (
+                                                    <select
+                                                        className="status-select"
+                                                        aria-label={`Status for ${task.title}`}
+                                                        value={task.status}
+                                                        disabled={task.status === 'DONE' || busyTaskId === task.id}
+                                                        onChange={(e) =>
+                                                            updateTaskStatus(
+                                                                task,
+                                                                e.target.value as Exclude<TaskStatus, 'OVERDUE'>,
+                                                            )
+                                                        }
+                                                    >
+                                                        {EDITABLE_STATUSES.map((status) => (
+                                                            <option key={status} value={status}>
+                                                                {status}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <span className={priorityBadgeClass(task.priority)}>{task.priority}</span>
+                                            </td>
+                                            <td>
+                                                <span className="icon-text">
+                                                    <CalendarClock size={15} aria-hidden="true" />
+                                                    {formatDate(task.due_date)}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className="icon-text">
+                                                    <UserRound size={15} aria-hidden="true" />
+                                                    {task.assignee ? task.assignee.name : 'Unassigned'}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {task.status === 'OVERDUE' && isAdmin ? (
+                                                    <button
+                                                        className="btn btn-danger btn-small"
+                                                        type="button"
+                                                        onClick={() => closeOverdueTask(task)}
+                                                        disabled={busyTaskId === task.id}
+                                                    >
+                                                        <CheckCircle2 size={15} aria-hidden="true" />
+                                                        <span>{busyTaskId === task.id ? 'Closing...' : 'Close'}</span>
+                                                    </button>
+                                                ) : task.status === 'OVERDUE' ? (
+                                                    <span className="muted">Admin only</span>
+                                                ) : (
+                                                    <span className="muted">No action</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </section>
-            )}
+
+                {isAdmin && (
+                    <aside className="panel create-task-panel">
+                        <div className="panel-header">
+                            <div>
+                                <p className="eyebrow">Admin action</p>
+                                <h2>Create task</h2>
+                            </div>
+                        </div>
+                        <TaskCreationForm projectId={project.id} onCreated={fetchProject} />
+                    </aside>
+                )}
+            </div>
         </main>
     );
 }
