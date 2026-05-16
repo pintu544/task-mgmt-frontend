@@ -1,0 +1,16 @@
+# Netlify deployment configuration for the React frontend.
+#
+# Set VITE_LARAVEL_API_URL and VITE_DJANGO_API_URL in Netlify's
+# environment-variable UI before the first build; both must point at the
+# deployed backend services and are inlined into the bundle at build time.
+
+[build]
+  base = "."
+  command = "npm ci && npm run build"
+  publish = "dist"
+
+# SPA fallback so client-side routes don't 404.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

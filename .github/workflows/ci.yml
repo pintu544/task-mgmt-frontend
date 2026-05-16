@@ -1,0 +1,40 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  build:
+    name: Type-check and build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run lint
+
+      - name: Build
+        env:
+          VITE_LARAVEL_API_URL: http://localhost:8000
+          VITE_DJANGO_API_URL: http://localhost:8001
+        run: npm run build
+
+      - name: Run tests
+        run: |
+          if [ -d src/__tests__ ] || find src -name "*.test.*" -print -quit | grep -q .; then
+            npm run test:run
+          else
+            echo "No Vitest tests defined yet."
+          fi
