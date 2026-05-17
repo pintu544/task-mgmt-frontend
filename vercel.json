@@ -5,6 +5,14 @@
     "installCommand": "npm ci",
     "rewrites": [
         {
+            "source": "/api/overdue/:path*",
+            "destination": "https://task-mgmt-django-production.up.railway.app/api/overdue/:path*"
+        },
+        {
+            "source": "/api/:path*",
+            "destination": "https://task-mgmt-laravel-production.up.railway.app/api/:path*"
+        },
+        {
             "source": "/(.*)",
             "destination": "/index.html"
         }
